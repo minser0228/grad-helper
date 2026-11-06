@@ -1,0 +1,11 @@
+# 실제 학생 이수 내역(개인정보)은 올리지 않는다
+cases/*.json
+cases/*.pdf
+# 자가진단 시뮬레이션 출력 PDF(이름·학번 포함)
+viewer.do*.pdf
+# 학과 자료(붙임2): 공개해도 되는지 학과에 확인하기 전까지 올리지 않는다 (확인되면 이 두 줄을 지운다)
+docs/sources/붙임2-*.pdf
+test/fixtures/track-doc.txt
+# 편집기·임시 파일
+.DS_Store
+Bash tool output*

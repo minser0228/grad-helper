@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>수강·졸업 도우미</title>
+  <!-- ?v= : 파일을 바꾸면 값을 올려 브라우저 캐시를 피한다 -->
+  <link rel="stylesheet" href="styles.css?v=20261108q">
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand">
+        <h1>수강·졸업 도우미</h1>
+        <p class="sub" id="dept"></p>
+      </div>
+      <div class="top-actions">
+        <div class="mode-bar" id="mode-bar" hidden>
+          <button class="mode-chip" id="mode-toggle" aria-haspopup="menu" aria-expanded="false" title="목적 바꾸기"><span class="mode-caret" aria-hidden="true">▾</span><span id="mode-name"></span></button>
+          <div class="mode-menu" id="mode-menu" role="menu" hidden>
+            <button role="menuitemradio" data-mode-opt="plan">수강 계획 세우기<span class="meta">남은 학기 추천 시간표</span></button>
+            <button role="menuitemradio" data-mode-opt="grad">졸업 요건 확인<span class="meta">남은 학점·졸업시험·외국어·사회봉사</span></button>
+          </div>
+        </div>
+        <button id="reset-open" class="top-btn" title="저장된 내용을 모두 지우고 처음부터">↺ 새로 시작</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 진행 표시줄. 번호는 목적별로 보이는 단계 순서대로 app.js가 붙인다 -->
+  <div class="stepbar" id="stepbar">
+    <nav class="steps" role="tablist" id="tabs">
+      <button role="tab" data-tab="basic" data-label="기본 정보"></button>
+      <button role="tab" data-tab="courses" data-label="과목·트랙"></button>
+      <button role="tab" data-tab="status" data-label="졸업 현황" data-mode="grad"></button>
+      <button role="tab" data-tab="plan" data-label="수강 계획" data-mode="plan"></button>
+    </nav>
+  </div>
+
+  <div id="sample-banner" class="banner" hidden>⚠ 지금 기준은 <b>예시 데이터</b>입니다. 판정 결과를 믿지 마세요.</div>
+
+  <main>
+    <div id="need-basic" class="warning warn" hidden>먼저 「기본 정보」에서 학생 구분, 입학년도, 현재 학년·학기를 입력해 주세요.</div>
+
+    <!-- 처음: 자가진단 시뮬레이션 PDF 넣기 (맨 위) · 저장 방법(접힘) · 안내. PDF를 넣으면 목적 고르기로 넘어간다 -->
+    <section id="tab-home" class="panel" hidden>
+      <p class="must-read"><span class="must-tag">필독</span> 본 도구는 참고용입니다. 최종 졸업 판정은 학과사무실에 문의하세요. (041-550-3619)</p>
+      <h2 class="home-title">자가진단 시뮬레이션 PDF를 넣어 주세요 <span class="req-mark">*</span></h2>
+      <label class="drop-zone" id="drop-zone"><span class="drop-title">자가진단 시뮬레이션 PDF를 여기로 끌어다 놓거나 눌러서 선택</span><span class="meta">학번·학년·전적대 인정 학점·수강 과목·사회봉사를 한 번에 채웁니다</span>
+        <input type="file" id="doc-files" accept="application/pdf,.pdf" multiple></label>
+      <div id="doc-list"></div>
+      <ul class="home-info">
+        <li><b>기준</b>: 2026학년도 학사종합안내 · 식품자원경제학과(환경자원경제학과) 14학번 이후 심화전공</li>
+        <li><b>지원하지 않음</b>: 복수전공·부전공(추후 추가 예정), 13학번 이전 입학, 교직, 조기졸업</li>
+        <li><b>개인정보</b>: PDF는 이 브라우저 안에서만 읽고 어디에도 보내지 않습니다. 창(탭)을 닫으면 입력한 내용이 모두 지워집니다 — 공용 PC에서도 그대로 닫으면 됩니다.</li>
+      </ul>
+      <details class="pdf-guide" id="pdf-guide">
+        <summary>자가진단 시뮬레이션 PDF 가져오는 방법</summary>
+        <ol>
+          <li>포털 → <b>웹정보 → 학사정보 → 졸업관리 → 자가진단 시뮬레이션</b></li>
+          <li>「전공정보」 아래 <b>「출력」</b> 버튼을 누릅니다.
+            <img src="assets/guide/1-print-button.png?v=4" alt="자가진단 시뮬레이션 화면의 전공정보 표와 오른쪽 아래 출력 버튼" loading="lazy"></li>
+          <li>새 창(학점이수 자가진단 시뮬레이션 서비스)이 뜨면 <b>인쇄</b>를 누르고, 프린터를 <b>「PDF로 저장」</b>으로 바꾼 뒤 <b>저장</b>합니다.
+            <img src="assets/guide/2-save-pdf.png?v=2" alt="인쇄 창에서 프린터를 PDF로 저장으로 고르고 저장 버튼을 누르는 화면" loading="lazy" class="narrow"></li>
+          <li>저장한 PDF를 아래 칸에 끌어다 놓거나 눌러서 고릅니다. <span class="meta">휴대폰보다 PC에서 저장하기 쉽습니다.</span></li>
+        </ol>
+      </details>
+      <div id="admin-docs"></div>
+    </section>
+
+    <!-- 목적 고르기: PDF를 넣으면 이 화면으로 -->
+    <section id="tab-purpose" class="panel" hidden>
+      <div class="panel-head"><h2>무엇을 하려고 하나요?</h2></div>
+      <p class="hint" id="purpose-sim"></p>
+      <div class="mode-cards">
+        <button class="mode-card" data-mode-pick="plan">
+          <span class="mode-icon"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7.5 13h3M13.5 13h3M7.5 16.5h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+          <b>수강 계획 세우기</b>
+          <span class="meta">남은 학점과 꼭 들을 과목을 보고, 추천 시간표를 만듭니다.</span>
+          <span class="mode-go">시작 →</span>
+        </button>
+        <button class="mode-card" data-mode-pick="grad">
+          <span class="mode-icon"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M2.5 9 12 4.5 21.5 9 12 13.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6.5 11v4.5c0 1.6 2.5 3 5.5 3s5.5-1.4 5.5-3V11M21.5 9v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+          <b>졸업 요건 확인</b>
+          <span class="meta">졸업까지 남은 학점·과목과 졸업시험·외국어·사회봉사를 확인합니다.</span>
+          <span class="mode-go">시작 →</span>
+        </button>
+      </div>
+      <div class="step-nav"><button data-go="home">← PDF 다시 넣기</button></div>
+    </section>
+
+    <!-- 기본 정보 -->
+    <section id="tab-basic" class="panel" hidden>
+      <div class="panel-head"><h2>기본 정보</h2><span class="head-note">PDF에서 읽은 정보가 맞는지 확인하세요. 다르면 「고치기」를 누르세요.</span></div>
+      <div class="form" id="basic-form"></div>
+      <div class="step-nav"><button data-go="home">← 처음으로</button><button class="primary" data-go="courses">다음 →</button></div>
+      <div class="storage-note">
+        입력한 정보는 이 창에만 있고 창을 닫으면 지워집니다.
+        <button id="export-btn" class="link">백업 파일 저장</button>
+        <label class="link">백업 불러오기 <input type="file" class="import-file" accept="application/json" hidden></label>
+      </div>
+    </section>
+
+    <!-- 과목·트랙: 트랙을 고르면 해당 모듈이 강조되고, 모듈 지도에서 과목을 눌러 이수 상태를 바꾼다 -->
+    <section id="tab-courses" class="panel" hidden>
+      <div class="panel-head"><h2>과목·트랙</h2><span class="head-note">트랙 이수 신청은 학기마다 신청기간이 있습니다. 학과 홈페이지·과톡방 공지를 확인하세요.</span></div>
+      <div id="taken-source"></div>
+      <div id="track-form"></div>
+      <p class="choose-first" id="choose-first" hidden></p>
+      <!-- 트랙 이수 여부(트랙 이수면 트랙까지)를 고르면 나타난다 -->
+      <div id="course-body">
+      <div class="kpis" id="map-summary"></div>
+      <div id="track-progress"></div>
+      <div id="map-notes"></div>
+      <div class="sub-head"><h3>학과 교과목 <span class="count" id="taken-count"></span></h3>
+        <details class="tip"><summary aria-label="설명 보기">?</summary><div class="tip-body">과목을 누를 때마다 미이수 → 이수 → 수강 중으로 바뀝니다. 시뮬레이션 PDF에서 읽은 과목은 미리 표시되어 있습니다(과목에 마우스를 올리면 수강 학기). 트랙을 고르면 그 트랙에 들어가는 모듈은 파란 테두리, 그중 트랙 기준을 채워 더 안 들어도 되는 모듈은 연한 파랑으로 채워지고, 고른 트랙에 필요하지 않은 모듈은 흐리게 보입니다(필수 과목이 있는 모듈은 제외). 흐린 모듈도 들은 과목은 체크할 수 있고 전공 학점에 들어갑니다.</div></details>
+        <span class="legend"><span class="ct-dot st-done"></span> 이수 <span class="ct-dot st-inprogress"></span> 수강 중 <span class="ct-dot st-none"></span> 미이수</span></div>
+      <div id="module-map"></div>
+
+      <div class="sub-head"><h3>그 밖의 과목 <span class="count">교양·학과기초·타 학과 등</span></h3></div>
+      <div id="taken-groups"></div>
+      <div class="add-box">
+        <div class="add-head"><span class="add-icon" aria-hidden="true">＋</span><b>과목 추가</b>
+          <span class="meta" id="add-hint">학과 교과목이 아닌 과목(교양·타 학과 등)이 빠졌으면 여기서 넣으세요. 학과 교과목은 위 모듈에서 누르면 됩니다.</span></div>
+        <div class="custom-row">
+          <input id="custom-name" placeholder="과목명 (예: 대학영어)" aria-label="과목명">
+          <input id="custom-credits" type="number" min="1" max="18" value="3" aria-label="학점">
+          <select id="custom-area" aria-label="이수 영역">
+            <option value="gen">교양</option>
+            <option value="base">학과기초</option>
+            <option value="major">전공</option>
+            <option value="free">자유선택</option>
+          </select>
+          <select id="add-status" aria-label="추가할 과목 상태">
+            <option value="done">이수</option>
+            <option value="inprogress">수강 중</option>
+          </select>
+          <button id="custom-add">추가</button>
+        </div>
+      </div>
+      </div>
+      <div class="step-nav"><button data-go="basic">← 이전</button><button class="primary" data-go="result" id="track-next"></button></div>
+    </section>
+
+    <!-- 졸업 현황 -->
+    <section id="tab-status" class="panel" hidden>
+      <div class="panel-head"><h2>졸업 현황</h2><span class="head-note">이번 학기 수강 중인 과목까지 이수한다고 볼 때</span></div>
+      <div id="status-summary"></div>
+      <div id="status-notes"></div>
+      <div id="status-body"></div>
+      <div id="status-sources"></div>
+      <div class="step-nav"><button data-go="courses">← 이전</button><button class="primary" data-switch="plan">수강 계획도 세우기 →</button></div>
+    </section>
+
+    <!-- 수강 계획 -->
+    <section id="tab-plan" class="panel" hidden>
+      <div class="panel-head"><h2>남은 학기 수강 계획</h2>
+      </div>
+      <div id="plan-summary"></div>
+      <p class="plan-empty" id="plan-empty" hidden></p>
+      <h3 id="need-title" hidden>꼭 들어야 할 과목</h3>
+      <div id="need-list"></div>
+      <div class="tt-bar" id="tt-bar"></div>
+      <div id="plan-warnings"></div>
+      <div class="sub-head" id="sem-title"><span class="meta">과목을 끌어다 놓거나 메뉴로 다른 학기로 옮길 수 있습니다</span>
+        <details class="tip"><summary aria-label="설명 보기">?</summary><div class="tip-body">실제 개설 과목은 매 학기 수강신청 기간에 확정됩니다. 표준 이수 학기(붙임2 p.6)를 참고한 추정 배치입니다. 1번은 가장 효율적인 안입니다 — 총 학점이 가장 적고, 학기에 다 들어가고, 개설 학기에 맞고, 필수 과목을 앞 학기에 두고, 학기별 학점이 고른 순서로 고릅니다. 「다른 버전 만들기」는 다음 순위의 안입니다. 「또는」은 그 학기에 함께 열리면 바꿔 들어도 같은 학점으로 같은 기준을 채우는 과목입니다.</div></details></div>
+      <div class="semesters" id="semesters"></div>
+      <div class="step-nav"><button data-go="courses">← 이전</button><button class="primary" data-switch="grad">졸업 요건도 확인하기 →</button></div>
+    </section>
+  </main>
+
+  <script src="rules.js?v=20261108q"></script>
+  <script src="engine.js?v=20261108q"></script>
+  <script src="app.js?v=20261108q"></script>
+</body>
+</html>

@@ -85,7 +85,7 @@ node scripts/validate.js         # 실제 이수 내역(cases/*.json) ↔ 학사
 
 ## 다음에 할 일 (2026-11-08 기준)
 
-- 배포: GitHub 저장소 연결 → GitHub Pages로 공개. 배포 뒤 **창(탭)을 닫으면 입력이 지워지는지**(sessionStorage) 실제 주소에서 다시 확인한다.
+- 배포 완료(2026-11-08): https://minser0228.github.io/grad-helper/ (저장소 minser0228/grad-helper, GitHub Pages — `main` 브랜치 루트). 실제 주소에서 PDF 읽기, 새로고침 유지, **창(탭)을 닫으면 입력 삭제**(sessionStorage), 외부 서버 요청 없음을 확인했다. 고친 뒤 `git push` 하면 1~2분 뒤 자동 반영(바꾼 파일이 있으면 `index.html`의 `?v=` 값을 올린다).
 - 붙임2(학과 자료) PDF를 저장소에 올려도 되는지 학과에 확인 — 안 되면 `docs/sources/붙임2-…pdf`는 올리지 않는다.
 - 매년 새 학사종합안내가 나오면 `#admin`으로 대조하고 `rules.js` 갱신(아래 「매년 갱신」).
 

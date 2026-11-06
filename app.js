@@ -1150,6 +1150,7 @@
   }
 
   function init() {
+    $('boot-note').hidden = true; // 시작됨 — 「새로고침해 주세요」 안내 숨김
     $('dept').textContent = `${R.departmentShort} · ${R.handbook.year}학년도 기준`;
     $('sample-banner').hidden = !R.sampleData;
     document.querySelectorAll('.steps button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));

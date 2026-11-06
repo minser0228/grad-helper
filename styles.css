@@ -498,3 +498,4 @@ textarea { width: 100%; margin-bottom: 6px; }
 .req-desc li { margin: 2px 0; }
 .req-notice { margin: 6px 0 0; font-size: 13px; color: var(--bad); font-weight: 600; }
 .req-item.ok .req-desc { color: var(--muted); }
+.boot-note { margin: 24px 0; padding: 16px; text-align: center; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }

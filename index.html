@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>수강·졸업 도우미</title>
   <!-- ?v= : 파일을 바꾸면 값을 올려 브라우저 캐시를 피한다 -->
-  <link rel="stylesheet" href="styles.css?v=20261108q">
+  <link rel="stylesheet" href="styles.css?v=20261108r">
 </head>
 <body>
   <header class="top">
@@ -40,6 +40,8 @@
   <div id="sample-banner" class="banner" hidden>⚠ 지금 기준은 <b>예시 데이터</b>입니다. 판정 결과를 믿지 마세요.</div>
 
   <main>
+    <!-- 화면 코드가 시작되면 숨긴다. 업데이트 직후처럼 파일을 못 불러와 시작이 안 되면 이 안내가 남는다 -->
+    <div id="boot-note" class="boot-note">불러오는 중입니다… 화면이 계속 비어 있으면 <b>새로고침(Ctrl+Shift+R, 휴대폰은 당겨서 새로고침)</b>해 주세요.</div>
     <div id="need-basic" class="warning warn" hidden>먼저 「기본 정보」에서 학생 구분, 입학년도, 현재 학년·학기를 입력해 주세요.</div>
 
     <!-- 처음: 자가진단 시뮬레이션 PDF 넣기 (맨 위) · 저장 방법(접힘) · 안내. PDF를 넣으면 목적 고르기로 넘어간다 -->
@@ -169,8 +171,8 @@
     </section>
   </main>
 
-  <script src="rules.js?v=20261108q"></script>
-  <script src="engine.js?v=20261108q"></script>
-  <script src="app.js?v=20261108q"></script>
+  <script src="rules.js?v=20261108r"></script>
+  <script src="engine.js?v=20261108r"></script>
+  <script src="app.js?v=20261108r"></script>
 </body>
 </html>

@@ -284,8 +284,8 @@ const SIM_TEXT = `학점이수 자가진단 시뮬레이션 - 2023
 성명 학번 학년-학기 4-2 재학 이수학기수 3 공학인증
 소속 공공·보건과학대학 환경자원경제학과 입학구분(입학년도) 편입학(2025)
 1전공 공공·보건과학대학 환경자원경제학과(심화과정) 편입학 인정 학기 수 4 학점 수 65
-졸업논문 통과여부 1전공 N
-2부전공 공인외국어 P/F F
+졸업논문 통과여부 1전공 P
+2부전공 공인외국어 P/F P
 마이크로1전공 사회봉사 P/F P(시간이수)
 주전공 교양과정_공통 28 0 0 0 0 0 P
 주전공 ≫ 대학영어1 0 0 0 0 0 0
@@ -354,7 +354,7 @@ const SIM_TEXT = `학점이수 자가진단 시뮬레이션 - 2023
 
 test('시뮬레이션 PDF: 머리글(교육과정·학년학기·편입·사회봉사·공인외국어)과 영역별 표를 읽는다', () => {
   const s = E.parseSimulation(R, SIM_TEXT);
-  assert.deepStrictEqual([s.baseYear, s.curriculum, s.studentType, s.entryYear, s.year, s.term, s.service, s.lang, s.thesis], [2023, 'C23', 'transfer', 2025, 4, 2, 'P', 'F', 'N']);
+  assert.deepStrictEqual([s.baseYear, s.curriculum, s.studentType, s.entryYear, s.year, s.term, s.service, s.lang, s.thesis], [2023, 'C23', 'transfer', 2025, 4, 2, 'P', 'P', 'P']);
   const row = (n) => s.rows.find((r) => r.name === n);
   assert.deepStrictEqual(row('심화전공_전공필수'), { name: '심화전공_전공필수', label: '전공필수', req: 'REQ', std: 15, earned: 12, enrolled: 0, pass: 'N', lack: 3, retake: null, subs: [] });
   assert.strictEqual(row('자유').retake, 2);

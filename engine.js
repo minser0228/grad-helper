@@ -81,6 +81,17 @@
     return risky.length ? { slack, risky: risky.map((i) => i.name) } : null;
   }
 
+  // 트랙 3개를 골랐을 때 세 트랙 모두에 들어가는 과목 (학과 확인은 「두 트랙 동시 인정」까지 — S-TRACK3)
+  function tripleCounted(rules, profile, taken) {
+    const ids = (profile.tracks || []).filter((t) => rules.tracks[t]);
+    if (ids.length < 3) return [];
+    const cat = catalog(rules);
+    const mods = ids.map((t) => new Set(rules.tracks[t].parts.flatMap((p) => p.modules)));
+    const seen = new Set();
+    return taken.filter((e) => !e.custom && e.status !== 'failed' && cat[e.id] && mods.every((m) => m.has(cat[e.id].module)))
+      .map((e) => e.id).filter((id) => !seen.has(id) && seen.add(id));
+  }
+
   function evalTrack(rules, trackId, items) {
     const t = rules.tracks[trackId];
     const parts = t.parts.map((p) => {
@@ -747,7 +758,7 @@
     return null;
   }
 
-  const api = { MODES, AREAS, catalog, findCourse, resolveEntry, itemsFor, transferItems, evaluate, serviceHours, checkHandbook, checkTrackDoc, classifyDoc, parseSimulation, coursesAsOf, termDiff, comparePortal, genDetail, langPaths, curriculumForYear, cohortYear, curriculumForProfile, semesterLabels, currentLoad, semesterCap, pickCourses, plan, pickKey, planScore, rankedPlans, alternatives, remainingNeeds, validatePlan, entryKey, entryCredits, parseTranscript, examPaths };
+  const api = { MODES, AREAS, catalog, tripleCounted, findCourse, resolveEntry, itemsFor, transferItems, evaluate, serviceHours, checkHandbook, checkTrackDoc, classifyDoc, parseSimulation, coursesAsOf, termDiff, comparePortal, genDetail, langPaths, curriculumForYear, cohortYear, curriculumForProfile, semesterLabels, currentLoad, semesterCap, pickCourses, plan, pickKey, planScore, rankedPlans, alternatives, remainingNeeds, validatePlan, entryKey, entryCredits, parseTranscript, examPaths };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Engine = api;
 })(this);

@@ -74,6 +74,13 @@
   const $ = (id) => document.getElementById(id);
   const badge = (cls, text) => h('span', { class: 'badge ' + cls }, text);
   const checkBadge = (show = true) => (show ? badge('check', '확인 필요') : null);
+  // 트랙 3개일 때 세 트랙에 모두 들어간 과목이 있으면: 학과 확인은 「두 트랙 동시 인정」까지라 확인 필요로 알린다 (S-TRACK3)
+  function track3Note() {
+    const ids = E.tripleCounted(R, state.profile, state.taken);
+    if (!ids.length) return null;
+    return h('div', { class: 'warning warn' }, checkBadge(),
+      ` ${ids.map(courseName).join(', ')}은(는) 고른 트랙 3개에 모두 인정된다고 보고 계산했습니다. 학과에서 확인된 것은 「한 과목을 두 트랙에 동시 인정」까지이고, 세 트랙 모두 인정되는지는 학과사무실에 확인이 필요합니다.`);
+  }
   const courseName = (id) => (CAT[id] ? CAT[id].name : id);
   // 24학번~ 「모듈 내 필수」는 트랙과 관계없이 졸업 필수다. 트랙을 안 하는 학생에게는 「필수 과목」으로 보여 준다.
   const reqLabel = (name) => (name === '모듈 내 필수' && state.profile.trackChoice !== 'yes' ? '필수 과목' : name);
@@ -261,7 +268,11 @@
   // 목적 고르기 화면
   function renderPurpose() {
     const sm = state.portal && state.portal.summary;
-    $('purpose-sim').textContent = sm ? `불러온 정보: ${[sm.curriculum && R.curricula[sm.curriculum] ? R.curricula[sm.curriculum].label : null, sm.studentType === 'transfer' ? '편입생' : '일반 재학생', sm.year ? `${sm.year}학년 ${sm.term}학기` : null].filter(Boolean).join(' · ')}` : '';
+    const kept = state.portal && state.portal.keptManual;
+    $('purpose-sim').replaceChildren(...(sm ? [
+      `불러온 정보: ${[sm.curriculum && R.curricula[sm.curriculum] ? R.curricula[sm.curriculum].label : null, sm.studentType === 'transfer' ? '편입생' : '일반 재학생', sm.year ? `${sm.year}학년 ${sm.term}학기` : null].filter(Boolean).join(' · ')}`,
+      kept ? h('span', { class: 'kept-note' }, ` · 직접 추가한 과목 ${kept}개는 그대로 두었습니다. 필요 없으면 「과목·트랙」에서 지우세요.`) : null,
+    ].filter(Boolean) : []));
     document.querySelectorAll('[data-mode-pick]').forEach((b) => b.classList.toggle('on', b.dataset.modePick === state.mode));
   }
 
@@ -612,7 +623,7 @@
     ].filter(Boolean));
 
     // 트랙별 진행표: 기준마다 한 칸 (채운 학점 / 기준)
-    $('track-progress').replaceChildren(...ev.tracks.map((t) => {
+    $('track-progress').replaceChildren(...[...ev.tracks.map((t) => {
       const okParts = t.parts.filter((x) => x.satisfied).length;
       return h('div', { class: 'track-row' + (t.satisfied ? ' ok' : '') },
         h('div', { class: 'tr-head' }, h('b', {}, t.name),
@@ -622,7 +633,7 @@
           h('span', { class: 'tr-cell-num' }, `${Math.min(x.earned, 99)}/${x.min}`),
           h('div', { class: 'bar-track' }, h('div', { class: 'bar-fill', style: `width:${Math.min(100, (x.earned / x.min) * 100)}%` }))))),
         t.commonMissing.length ? h('div', { class: 'tr-common' }, '공통 필수 남음: ' + t.commonMissing.map(courseName).join(', ')) : null);
-    }));
+    }), track3Note()].filter(Boolean));
 
     const cur = R.curricula[state.profile.curriculum];
     const curReq = cur.requirements.find((r) => r.kind === 'allOf');
@@ -765,17 +776,24 @@
     } else if (s.baseYear && s.studentType === 'regular') patch.entryYear = s.baseYear;
     if (s.studentType) patch.studentType = s.studentType;
     if (s.year) { patch.year = s.year; patch.term = s.term; }
-    if (Object.keys(t.transfer).length) patch.transferCredits = { ...state.profile.transferCredits, ...t.transfer };
-    state.profile = { ...state.profile, ...patch, extra: { ...state.profile.extra, ...(s.service === 'P' ? { service: 'P' } : {}), ...(s.lang === 'P' ? { lang: 'P' } : {}), ...(s.thesis === 'P' ? { examPassed: true } : {}) } };
+    // 새 PDF가 기준: 전적대 인정 학점은 이전 값과 합치지 않고 바꾸고(없으면 0),
+    // 졸업시험·공인외국어·사회봉사는 새 PDF가 P일 때만 충족 — 이전 PDF의 통과 값을 남기지 않는다
+    patch.transferCredits = { gen: 0, base: 0, free: 0, major: 0, ...t.transfer };
+    state.profile = { ...state.profile, ...patch, extra: { ...state.profile.extra, service: s.service === 'P' ? 'P' : 'N', lang: s.lang === 'P' ? 'P' : 'N', examPassed: s.thesis === 'P' } };
     state.simCourses = [
       ...t.found.map((f) => ({ id: f.id, status: f.status, term: f.term, raw: f.raw, grade: f.grade, src: 'sim' })),
       ...t.unmatched.map((u) => ({ custom: true, id: 'X-' + u.code, code: u.code, name: u.name, credits: u.credits, area: u.area || 'free', status: u.status, term: u.term, grade: u.grade, src: 'sim' })),
     ];
+    // 직접 추가한 과목은 남긴다. 단 새 PDF에 같은 이름의 과목이 있으면 두 번 세지 않도록 뺀다
+    const nameKey = (n) => String(n || '').replace(/[\s_·()[\]]/g, '');
+    const simNames = new Set(state.simCourses.map((c) => nameKey(c.custom ? c.name : c.raw)).filter(Boolean));
+    state.taken = state.taken.filter((e) => !(e.src === 'manual' && e.custom && simNames.has(nameKey(e.name))));
     state.profile = { ...state.profile, asOf: null };
     rebuildTaken();
     const transferTotal = Object.values(t.transfer).reduce((a, b) => a + b, 0);
     const courses = new Set([...t.found.map((f) => f.id), ...t.unmatched.map((u) => u.code)]).size;
-    state.portal = { ...stamp, baseYear: s.baseYear, rows: s.rows, summary: { curriculum: s.curriculum, studentType: s.studentType, year: s.year, term: s.term, transferTotal, courses } };
+    const keptManual = state.taken.filter((e) => e.src === 'manual').length;
+    state.portal = { ...stamp, baseYear: s.baseYear, rows: s.rows, keptManual, summary: { curriculum: s.curriculum, studentType: s.studentType, year: s.year, term: s.term, transferTotal, courses } };
     state.plan = null;
   }
 
@@ -839,6 +857,8 @@
         if (t.commonMissing.length) rest.push(`공통 필수 ${t.commonMissing.map(courseName).join(', ')}`);
         return h('li', { class: 'row-line' }, h('b', {}, t.name), t.satisfied ? h('span', { class: 'st-ok' }, '충족 ✓') : h('span', { class: 'st-no' }, '남음: ' + rest.join(', ')));
       })));
+      const t3 = track3Note();
+      if (t3) blocks.push(t3);
     }
     // 학점 외 졸업 요건: 요건만 자세히 적고, 학생이 포털에서 확인한 뒤 「충족」만 체크한다
     const x = state.profile.extra;
@@ -895,7 +915,7 @@
     $('status-body').replaceChildren(...blocks);
 
     // 판정 기준 출처 (접힘)
-    const srcIds = [...new Set([...ev.requirements.map((r) => r.sourceId), ...(ev.tracks.length ? ['S-TRACKRULE', 'S-OFFICE'] : [])].filter(Boolean))];
+    const srcIds = [...new Set([...ev.requirements.map((r) => r.sourceId), ...(ev.tracks.length ? ['S-TRACKRULE', 'S-OFFICE'] : []), ...(E.tripleCounted(R, state.profile, state.taken).length ? ['S-TRACK3'] : [])].filter(Boolean))];
     $('status-sources').replaceChildren(h('details', { class: 'sources-box' }, h('summary', {}, '판정 기준 출처'), srcIds.map((id) => sourceView(id))));
   }
 
@@ -1041,6 +1061,7 @@
           h('span', { class: 'meta' }, x.options.length ? ` — ${x.options.map(courseName).join(', ')} 중` : ' — 남은 과목 없음')))));
       }
     }
+    if (prof.tracks.length) blocks.push(track3Note());
     $('need-list').replaceChildren(...(nothing ? [] : blocks.filter(Boolean)));
     $('need-title').hidden = true;
 

@@ -527,3 +527,13 @@ test('초과학기: 9학기 이상 등록한 다음 학기에는 학점 이월�
   assert.strictEqual(E.semesterCap(R, { ...p, semesterNo: 8 }, 1, [], 15).cap, 19);
   assert.strictEqual(E.semesterCap(R, { ...p, semesterNo: 8 }, 0, [], 15).cap, 22);
 });
+
+test('트랙 3개: 세 트랙에 모두 들어가는 과목만 「확인 필요」 대상으로 고른다', () => {
+  const base = { ...regular, trackChoice: 'yes' };
+  const taken = [{ id: 'L-1', status: 'done' }, { id: 'L-3', status: 'inprogress' }, { id: 'F-1', status: 'done' }, { id: 'J-1', status: 'failed' }];
+  // 푸드마케팅·농식품유통·경제학은 J·L 모듈을 함께 쓴다 (F는 경제학에 없음, F·NP는 제외)
+  assert.deepStrictEqual(E.tripleCounted(R, { ...base, tracks: ['MKT', 'DIST', 'ECON'] }, taken), ['L-1', 'L-3']);
+  // 트랙 2개까지는 학과 확인된 범위라 대상 없음
+  assert.deepStrictEqual(E.tripleCounted(R, { ...base, tracks: ['MKT', 'DIST'] }, taken), []);
+  assert.strictEqual(R.sources['S-TRACK3'].verified, false);
+});

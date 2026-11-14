@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>수강·졸업 도우미</title>
-  <meta name="description" content="식품자원경제학과 졸업 요건 확인·수강 계획 (참고용). 자가진단 시뮬레이션 PDF 하나로 남은 학점, 꼭 들을 과목, 트랙, 추천 시간표를 봅니다.">
+  <meta name="description" content="식품자원경제학과 졸업 요건 확인·수강 계획 (참고용). 자가진단 시뮬레이션 PDF 하나로 남은 학점, 꼭 들을 과목, 트랙, 학기별 수강 계획를 봅니다.">
   <!-- 링크 공유 미리보기 (카카오톡·메신저 등). 이미지는 절대 주소여야 한다 -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="수강·졸업 도우미">
   <meta property="og:title" content="수강·졸업 도우미 — 식품자원경제학과">
-  <meta property="og:description" content="자가진단 시뮬레이션 PDF 하나로 남은 학점 · 꼭 들을 과목 · 트랙 · 추천 시간표를 확인하세요. (참고용)">
+  <meta property="og:description" content="자가진단 시뮬레이션 PDF 하나로 남은 학점 · 꼭 들을 과목 · 트랙 · 학기별 수강 계획을 확인하세요. (참고용)">
   <meta property="og:url" content="https://minser0228.github.io/grad-helper/">
   <meta property="og:image" content="https://minser0228.github.io/grad-helper/assets/og.png">
   <meta property="og:image:width" content="1200">
@@ -17,7 +17,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230b4ea2'/%3E%3Cpath d='M3.5 10 12 6l8.5 4L12 14z' fill='none' stroke='white' stroke-width='1.6' stroke-linejoin='round'/%3E%3Cpath d='M7 11.8v3.5c0 1.3 2.2 2.4 5 2.4s5-1.1 5-2.4v-3.5' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E">
   <!-- ?v= : 파일을 바꾸면 값을 올려 브라우저 캐시를 피한다 -->
-  <link rel="stylesheet" href="styles.css?v=20261114a">
+  <link rel="stylesheet" href="styles.css?v=20261114j">
 </head>
 <body>
   <header class="top">
@@ -30,7 +30,7 @@
         <div class="mode-bar" id="mode-bar" hidden>
           <button class="mode-chip" id="mode-toggle" aria-haspopup="menu" aria-expanded="false" title="목적 바꾸기"><span class="mode-caret" aria-hidden="true">▾</span><span id="mode-name"></span></button>
           <div class="mode-menu" id="mode-menu" role="menu" hidden>
-            <button role="menuitemradio" data-mode-opt="plan">수강 계획 세우기<span class="meta">남은 학기 추천 시간표</span></button>
+            <button role="menuitemradio" data-mode-opt="plan">수강 계획 세우기<span class="meta">남은 학기 학기별 수강 계획</span></button>
             <button role="menuitemradio" data-mode-opt="grad">졸업 요건 확인<span class="meta">남은 학점·졸업시험·외국어·사회봉사</span></button>
           </div>
         </div>
@@ -50,6 +50,7 @@
   </div>
 
   <div id="sample-banner" class="banner" hidden>⚠ 지금 기준은 <b>예시 데이터</b>입니다. 판정 결과를 믿지 마세요.</div>
+  <div id="demo-banner" class="banner demo" hidden>지금은 <b>가상 샘플 학생</b>(24학번 재학생, 3학년 2학기)으로 체험 중입니다. 내 결과를 보려면 오른쪽 위 「새로 시작」 후 내 PDF를 넣으세요.</div>
 
   <main>
     <!-- 화면 코드가 시작되면 숨긴다. 업데이트 직후처럼 파일을 못 불러와 시작이 안 되면 이 안내가 남는다 -->
@@ -59,7 +60,10 @@
     <!-- 처음: 자가진단 시뮬레이션 PDF 넣기 (맨 위) · 저장 방법(접힘) · 안내. PDF를 넣으면 목적 고르기로 넘어간다 -->
     <section id="tab-home" class="panel" hidden>
       <p class="must-read"><span class="must-tag">필독</span> 본 도구는 참고용입니다. 최종 졸업 판정은 학과사무실에 문의하세요. (041-550-3619)</p>
-      <h2 class="home-title">자가진단 시뮬레이션 PDF를 넣어 주세요 <span class="req-mark">*</span></h2>
+      <div class="home-title-row">
+        <h2 class="home-title">자가진단 시뮬레이션 PDF를 넣어 주세요 <span class="req-mark">*</span></h2>
+        <div class="demo-row"><span>PDF가 없거나 먼저 둘러보고 싶다면</span><button type="button" id="demo-btn" class="primary demo-btn" title="가상 학생 데이터로 모든 화면을 체험합니다">▶ 샘플로 체험하기</button></div>
+      </div>
       <label class="drop-zone" id="drop-zone"><span class="drop-title">자가진단 시뮬레이션 PDF를 여기로 끌어다 놓거나 눌러서 선택</span><span class="meta">학번·학년·전적대 인정 학점·수강 과목·사회봉사를 한 번에 채웁니다</span>
         <input type="file" id="doc-files" accept="application/pdf,.pdf" multiple></label>
       <div id="doc-list"></div>
@@ -90,7 +94,7 @@
         <button class="mode-card" data-mode-pick="plan">
           <span class="mode-icon"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7.5 13h3M13.5 13h3M7.5 16.5h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
           <b>수강 계획 세우기</b>
-          <span class="meta">남은 학점과 꼭 들을 과목을 보고, 추천 시간표를 만듭니다.</span>
+          <span class="meta">남은 학점과 꼭 들을 과목을 보고, 학기별 수강 계획을 만듭니다.</span>
           <span class="mode-go">시작 →</span>
         </button>
         <button class="mode-card" data-mode-pick="grad">
@@ -159,6 +163,7 @@
     <!-- 졸업 현황 -->
     <section id="tab-status" class="panel" hidden>
       <div class="panel-head"><h2>졸업 현황</h2><span class="head-note">이번 학기 수강 중인 과목까지 이수한다고 볼 때</span></div>
+      <p class="head-notice" id="status-headnotice" hidden></p>
       <div id="status-summary"></div>
       <div id="status-notes"></div>
       <div id="status-body"></div>
@@ -177,14 +182,15 @@
       <div class="tt-bar" id="tt-bar"></div>
       <div id="plan-warnings"></div>
       <div class="sub-head" id="sem-title"><span class="meta">과목을 끌어다 놓거나 메뉴로 다른 학기로 옮길 수 있습니다</span>
-        <details class="tip"><summary aria-label="설명 보기">?</summary><div class="tip-body">실제 개설 과목은 매 학기 수강신청 기간에 확정됩니다. 표준 이수 학기(붙임2 p.6)를 참고한 추정 배치입니다. 1번은 가장 효율적인 안입니다 — 총 학점이 가장 적고, 학기에 다 들어가고, 개설 학기에 맞고, 필수 과목을 앞 학기에 두고, 학기별 학점이 고른 순서로 고릅니다. 「다른 버전 만들기」는 다음 순위의 안입니다. 「또는」은 그 학기에 함께 열리면 바꿔 들어도 같은 학점으로 같은 기준을 채우는 과목입니다.</div></details></div>
+        <details class="tip"><summary aria-label="설명 보기">?</summary><div class="tip-body">실제 개설 과목은 매 학기 수강신청 기간에 확정됩니다. 표준 이수 학기(붙임2 p.6)를 참고한 추정 배치입니다. 과목 순서를 바꿔 만든 배치 24가지 중 총 학점이 가장 적은 안만 남기고, 학기에 다 들어가는지 → 개설 학기에 맞는지 → 필수 과목을 앞 학기에 두었는지 → 학기별 학점이 고른지 순서로 순위를 매깁니다. 모든 경우를 다 따져 본 최소는 아닙니다. 수업 시간·분반 충돌은 확인하지 않습니다. 「다른 버전 만들기」는 다음 순위의 안입니다. 「또는」은 그 학기에 함께 열리면 바꿔 들어도 같은 학점으로 같은 기준을 채우는 과목입니다.</div></details></div>
       <div class="semesters" id="semesters"></div>
       <div class="step-nav"><button data-go="courses">← 이전</button><button class="primary" data-switch="grad">졸업 요건도 확인하기 →</button></div>
     </section>
   </main>
 
-  <script src="rules.js?v=20261114a"></script>
-  <script src="engine.js?v=20261114a"></script>
-  <script src="app.js?v=20261114a"></script>
+  <script src="rules.js?v=20261114j"></script>
+  <script src="sample.js?v=20261114j"></script>
+  <script src="engine.js?v=20261114j"></script>
+  <script src="app.js?v=20261114j"></script>
 </body>
 </html>

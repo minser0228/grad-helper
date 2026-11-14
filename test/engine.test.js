@@ -537,3 +537,62 @@ test('트랙 3개: 세 트랙에 모두 들어가는 과목만 「확인 필요�
   assert.deepStrictEqual(E.tripleCounted(R, { ...base, tracks: ['MKT', 'DIST'] }, taken), []);
   assert.strictEqual(R.sources['S-TRACK3'].verified, false);
 });
+
+// ───── 사례별 검증: 예상 정답은 규칙 문서(학사종합안내·붙임2·학과 공지)로 손으로 계산한 값 ─────
+// 기준 학생: sample.js 가상 학생 (24학번 재학생 3-2). 자세한 계산은 docs/검증-사례.md
+const SAMPLE = require('../sample.js');
+const sampleSim = E.parseSimulation(R, SAMPLE);
+const toTaken = (t) => [
+  ...t.found.map((f) => ({ id: f.id, status: f.status, term: f.term })),
+  ...t.unmatched.map((u) => ({ custom: true, id: 'X-' + u.code, code: u.code, name: u.name, credits: u.credits, area: u.area || 'free', status: u.status, term: u.term })),
+];
+const sampleTaken = toTaken(sampleSim.transcript);
+const sampleProf = { ...regular, curriculum: 'C24', entryYear: 2024, year: 3, term: 2, trackChoice: 'no', tracks: [], extra: { service: 'P' } };
+const reqOf = (ev, id) => ev.requirements.find((r) => r.id === id);
+
+test('사례 1 · 재학생 트랙 없음: 필수 1과목 남음, F 제외, 수강 중 포함 예측', () => {
+  assert.deepStrictEqual([sampleSim.studentType, sampleSim.curriculum, sampleSim.year, sampleSim.term], ['regular', 'C24', 3, 2]);
+  const ev = E.evaluate(R, sampleProf, sampleTaken, 'predict');
+  assert.deepStrictEqual(reqOf(ev, 'REQ').missing, ['H-1']); // 마케팅조사분석
+  assert.strictEqual(reqOf(ev, 'MAJOR').earned, 39); // 이수 10과목 30 + 수강 중 3과목 9, 한국경제사 F 제외
+  assert.strictEqual(reqOf(ev, 'GEN').earned, 18); // 2+2+3+3+2 + 3+3
+  assert.strictEqual(reqOf(ev, 'BASE').earned, 15); // 학문기초 A 2과목 6 + 학과기초 3과목 9
+  assert.strictEqual(reqOf(ev, 'TOTAL').earned, 79); // 이수 68 + 수강 중 11
+});
+
+test('사례 2 · 「현재」는 수강 중 과목을 빼고 센다', () => {
+  const ev = E.evaluate(R, sampleProf, sampleTaken, 'now');
+  assert.strictEqual(reqOf(ev, 'MAJOR').earned, 30);
+  assert.strictEqual(reqOf(ev, 'TOTAL').earned, 68);
+  assert.deepStrictEqual(reqOf(ev, 'REQ').missing.sort(), ['F-1', 'H-1']); // 식품유통경제학은 수강 중
+});
+
+test('사례 3 · F 받은 과목을 재수강해 통과하면 마지막 기록으로 인정', () => {
+  const retake = E.parseSimulation(R, SAMPLE + '\n재이수전공\n전공선택\n2026-1 한국경제사[900302] 3 P');
+  const taken = E.coursesAsOf(toTaken(retake.transcript), null);
+  assert.strictEqual(taken.find((e) => e.id === 'G-3').status, 'done');
+  assert.strictEqual(reqOf(E.evaluate(R, sampleProf, taken, 'predict'), 'MAJOR').earned, 42);
+});
+
+test('사례 4 · 편입생: 전적대 인정 학점으로 교양·학과기초를 채운다', () => {
+  const prof = { ...regular, studentType: 'transfer', curriculum: 'C23', entryYear: 2025, transferCredits: { gen: 28, base: 12, free: 25, major: 0 }, extra: {} };
+  const ev = E.evaluate(R, prof, [], 'now');
+  assert.strictEqual(reqOf(ev, 'GEN').satisfied, true); // 편입생 교양 28
+  assert.strictEqual(reqOf(ev, 'BASE').satisfied, true); // 12
+  assert.strictEqual(reqOf(ev, 'TOTAL').earned, 65);
+  assert.strictEqual(reqOf(ev, 'MAJOR').earned, 0);
+});
+
+test('사례 5 · 트랙 지역개발: 모듈 5개 × 6학점 중 3개 모듈 부족', () => {
+  const prof = { ...sampleProf, trackChoice: 'yes', tracks: ['REG'] };
+  const t = E.evaluate(R, prof, sampleTaken, 'predict').tracks[0];
+  assert.deepStrictEqual(t.parts.map((x) => x.earned), [6, 6, 3, 0, 3]); // D·E·H·I·K
+  assert.strictEqual(t.satisfied, false);
+  assert.ok(t.commonMissing.includes('H-1')); // 모듈 내 필수
+});
+
+test('사례 6 · 푸드바이오경제 트랙: 타과(M·N·O) 과목을 전공으로 미리 계산', () => {
+  const prof = { ...sampleProf, trackChoice: 'yes', tracks: ['BIO'] };
+  assert.strictEqual(reqOf(E.evaluate(R, prof, sampleTaken, 'predict'), 'MAJOR').earned, 44); // 39 + 영양학 3 + 인체의 신비 2
+  assert.strictEqual(reqOf(E.evaluate(R, prof, sampleTaken, 'now'), 'MAJOR').earned, 30); // 「현재」는 포털처럼 전환 전
+});

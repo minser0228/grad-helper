@@ -499,3 +499,19 @@ textarea { width: 100%; margin-bottom: 6px; }
 .req-notice { margin: 6px 0 0; font-size: 13px; color: var(--bad); font-weight: 600; }
 .req-item.ok .req-desc { color: var(--muted); }
 .boot-note { margin: 24px 0; padding: 16px; text-align: center; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+
+/* 「그 밖의 과목」 묶음: 화살표만으로는 접히는 줄 모르므로 오른쪽에 글자 버튼을 보인다 */
+.fold-group > summary::after { content: '접기 ▴'; margin-left: auto; font-size: 13px; font-weight: 600; color: var(--brand); border: 1px solid var(--line, #d7dde8); border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+.fold-group:not([open]) > summary::after { content: '펼치기 ▾'; }
+.fold-group > summary:hover::after { background: var(--brand); color: #fff; border-color: var(--brand); }
+/* 결과가 「수강 중 과목 통과」를 가정했음을 밝히는 줄 */
+.plan-assume { margin: 0 0 8px; font-size: 13.5px; color: #8a5300; background: #fff7e6; border-left: 3px solid #e0a030; padding: 5px 10px; border-radius: 4px; }
+/* 제목 아래 짧은 공지 (8학기 이상 등록 안내 등) */
+.head-notice { margin: -6px 0 14px; font-size: 13.5px; color: var(--muted); line-height: 1.55; }
+.notice-tag { display: inline-block; font-size: 12px; font-weight: 700; color: var(--brand); background: var(--brand-soft); border-radius: 4px; padding: 1px 7px; margin-right: 2px; }
+/* 샘플로 체험하기: 첫 화면 카드 맨 아래 오른쪽 */
+.home-title-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px 16px; margin-bottom: 14px; }
+.home-title-row .home-title { margin: 0 auto 0 0; }
+.demo-row { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-left: auto; font-size: 14px; color: var(--muted); }
+.demo-btn { font-size: 15px; font-weight: 700; padding: 9px 18px; border-radius: 8px; }
+.banner.demo { background: #fff7e6; color: #7a4a00; border-color: #f0cf8a; }

@@ -30,7 +30,7 @@
     handbook: null, // { year, fileName, checkedAt, checks:[{id,ok}] } — 첨부한 학사종합안내 확인 결과
     portal: null, // { fileName, checkedAt, baseYear, rows, summary } — 불러온 자가진단 시뮬레이션 (이름·학번 없음)
     trackDoc: null, // { fileName, checkedAt, checks } — 첨부한 트랙 교육과정(붙임2) 확인 결과
-    planShown: false, // 「추천 시간표 만들기」를 눌렀는지
+    planShown: false, // 「학기별 수강 계획 만들기」를 눌렀는지
     simCourses: [], // 시뮬레이션에서 읽은 과목 전체(들은 학기 포함, 재수강 기록도). 기준 학기에 따라 taken을 다시 만든다
   });
 
@@ -74,6 +74,18 @@
   const $ = (id) => document.getElementById(id);
   const badge = (cls, text) => h('span', { class: 'badge ' + cls }, text);
   const checkBadge = (show = true) => (show ? badge('check', '확인 필요') : null);
+  // 이번 학기 수강 중인 과목 수·학점 (결과가 「통과한다고 보고」 계산한 것임을 밝힐 때)
+  function pendingLoad() {
+    const l = state.taken.filter((t) => t.status === 'inprogress');
+    return { n: l.length, cr: l.reduce((s, t) => s + E.entryCredits(t, CAT), 0) };
+  }
+  // 「충족」인데 수강 중인 과목을 통과해야만 유지되면 「충족 예정」
+  const trackOkLabel = (t) => (t.parts.some((x) => x.fragile) ? '충족 예정 (수강 중 과목 통과 시)' : '충족 ✓');
+  function mustDoneLabel(ev, check) {
+    const a = ev && ev.requirements.find((r) => r.kind === 'allOf');
+    const inprog = a ? a.counted.filter((c) => c.status === 'inprogress').map((c) => c.name) : [];
+    return inprog.length ? `남은 과목 없음 — 수강 중인 ${inprog.join(', ')}을(를) 통과하면 완료` : (check ? '모두 들었습니다 ✓' : '모두 들었습니다');
+  }
   // 트랙 3개일 때 세 트랙에 모두 들어간 과목이 있으면: 학과 확인은 「두 트랙 동시 인정」까지라 확인 필요로 알린다 (S-TRACK3)
   function track3Note() {
     const ids = E.tripleCounted(R, state.profile, state.taken);
@@ -472,12 +484,16 @@
   const normName = (x) => String(x || '').replace(/^_/, '').replace(/\s+/g, '');
 
   // 8학기 이상인데 졸업요건이 남았으면: 9학기 등록 안내 (학사종합안내 [3.주요학사제도] p.1–2, S-OVER)
-  function overNotice(ev) {
+  function overText(ev) {
     const n = semesterNo();
     if (!n || n < 8 || ev.allSatisfied) return null;
-    return h('div', { class: 'warning info' }, n === 8
+    return n === 8
       ? '이번 학기(8학기)에 졸업요건을 다 채우지 못하면 9학기 등록이 필요합니다. 8개 학기 이상 등록하고 졸업요건을 못 채운 학생은 수강신청 후 등록해야 하며, 등록하지 않으면 제적됩니다. 9학기 등록자는 다음 학기로 학점 이월이 없습니다.'
-      : `초과학기(${n}학기) 중입니다. 졸업요건을 채울 때까지 매 학기 수강신청 후 등록해야 하며, 등록하지 않으면 제적됩니다. 9학기 이상 등록자는 다음 학기로 학점 이월이 없습니다.`);
+      : `초과학기(${n}학기) 중입니다. 졸업요건을 채울 때까지 매 학기 수강신청 후 등록해야 하며, 등록하지 않으면 제적됩니다. 9학기 이상 등록자는 다음 학기로 학점 이월이 없습니다.`;
+  }
+  function overNotice(ev) {
+    const t = overText(ev);
+    return t ? h('div', { class: 'warning info' }, t) : null;
   }
 
   // F·NP 안내: 학점이 인정되지 않으니 필수면 재수강, 아니면 다른 과목으로 학점을 채워야 한다
@@ -550,7 +566,7 @@
     }
     const noTrack = p.trackChoice === 'no';
     const rows = state.taken.map((t, idx) => ({ t, idx, r: E.resolveEntry(t, CAT, R) })).filter(({ r }) => r.custom || r.unknown || (noTrack && (r.kind === 'other' || (CAT[r.cid] && CAT[r.cid].discontinued))));
-    // 트랙 판단에는 필요 없으니 접어 두고 「n과목 · m학점」(이수 + 수강 중)만 보인다. ▸ 를 누르면 펼친다.
+    // 트랙 판단에는 필요 없으니 접어 두고 「n과목 · m학점」(이수 + 수강 중)만 보인다. 제목 줄 오른쪽 「펼치기 ▾」로 펼친다.
     for (const [key, title, test] of COURSE_GROUPS) {
       const list = rows.filter(({ r }) => test(r));
       if (!list.length) continue;
@@ -627,7 +643,7 @@
       const okParts = t.parts.filter((x) => x.satisfied).length;
       return h('div', { class: 'track-row' + (t.satisfied ? ' ok' : '') },
         h('div', { class: 'tr-head' }, h('b', {}, t.name),
-          h('span', { class: 'tr-state' }, t.satisfied ? '충족 ✓' : `기준 ${okParts}/${t.parts.length}`)),
+          h('span', { class: 'tr-state' }, t.satisfied ? trackOkLabel(t) : `기준 ${okParts}/${t.parts.length}`)),
         h('div', { class: 'tr-cells' }, t.parts.map((x) => h('div', { class: 'tr-cell' + (x.satisfied ? ' ok' : '') },
           h('span', { class: 'tr-cell-label' }, x.modules.length > 1 ? x.label.split(' ')[0] + ' 합계' : `${x.modules[0]} ${R.modules[x.modules[0]].name}`),
           h('span', { class: 'tr-cell-num' }, `${Math.min(x.earned, 99)}/${x.min}`),
@@ -816,22 +832,20 @@
     const totalLeft = Math.max(left('TOTAL'), areaLeft);
     const freeLeft = totalLeft - areaLeft;
     const creditsOk = !totalLeft && !parts.length;
+    // 수강 중인 과목을 통과해야만 채워지는 학점 기준이 있으면 「충족 예정」 (이미 채운 것과 구분)
+    const creditsPending = creditsOk && ev.requirements.some((r) => r.fragile && r.unit === '학점');
+    const pend = pendingLoad();
     $('status-summary').replaceChildren(...[
-      creditsOk ? h('h3', { class: 'plan-total' }, '학점 기준 ', h('span', { class: 'plan-total-num' }, '모두 채웠습니다 ✓'))
+      creditsOk ? h('h3', { class: 'plan-total' }, '학점 기준 ', h('span', { class: 'plan-total-num' }, creditsPending ? '충족 예정' : '모두 채웠습니다 ✓'))
         : h('h3', { class: 'plan-total' }, '졸업까지 남은 학점 ', h('span', { class: 'plan-total-num' }, `${totalLeft}학점`)),
       !creditsOk ? h('p', { class: 'plan-breakdown' }, parts.map(([label, n]) => `${label} ${n}학점`).join(' · ') + (freeLeft ? `${parts.length ? ' · ' : ''}나머지 ${freeLeft}학점은 아무 과목(자유선택)` : '')) : null,
+      pend.n ? h('p', { class: 'plan-assume' }, creditsPending
+        ? `이번 학기 수강 중인 ${pend.n}과목(${pend.cr}학점)을 모두 통과하면 채워집니다. 아직 채운 것은 아닙니다.`
+        : `이번 학기 수강 중인 ${pend.n}과목(${pend.cr}학점)을 모두 통과한다고 보고 계산했습니다.`) : null,
     ].filter(Boolean));
 
-    // 안내: F·NP / 놓치면 부족해지는 기준 / 트랙 이수 가정
+    // 안내: F·NP / 트랙 이수 가정 (수강 중 과목에 기대는 기준은 각 줄의 「충족 예정」으로 보인다)
     const notes = [];
-    const fragile = [
-      ...ev.requirements.filter((r) => r.fragile).map((r) => ({ name: r.name, f: r.fragile })),
-      ...ev.tracks.flatMap((t) => t.parts.filter((x) => x.fragile).map((x) => ({ name: `${trackShort(t.id)} ${x.label.split(' (')[0]}`, f: x.fragile }))),
-    ];
-    if (fragile.length) {
-      const courses = [...new Set(fragile.flatMap((x) => x.f.risky))];
-      notes.push(h('div', { class: 'warning warn' }, `⚠ 수강 중인 ${courses.join(', ')} 중 하나라도 이수하지 못하면 부족해지는 기준이 있습니다: ${fragile.map((x) => x.name).join(', ')}`));
-    }
     if (ev.assumedTracks.length && ev.convertedCredits) {
       const strict = E.evaluate(R, prof, state.taken, 'predictStrict');
       const strictMajor = strict.requirements.find((r) => r.kind === 'majorTotal').earned;
@@ -842,20 +856,25 @@
         : [`${assumedNames} 트랙 이수를 가정해 타과 ${ev.convertedCredits}학점을 전공으로 계산했습니다. `,
           tip(`대상: ${ev.convertedItems.map((i) => i.name).join(', ')}. 실제 전공 인정은 트랙 기준을 다 채운 뒤이고, 못 마치면 이 학점은 자유선택으로 남아 전공은 ${strictMajor}학점입니다.`)]));
     }
-    $('status-notes').replaceChildren(...[failedNotice(), overNotice(ev), ...notes].filter(Boolean));
+    $('status-notes').replaceChildren(...[failedNotice(), ...notes].filter(Boolean));
+    // 8학기 이상·요건 남음: 제목 옆 안내처럼 짧게 (공지)
+    const ov = overText(ev);
+    $('status-headnotice').hidden = !ov;
+    $('status-headnotice').replaceChildren(...(ov ? [h('span', { class: 'notice-tag' }, '공지'), ' ' + ov] : []));
 
     const blocks = [];
     // 꼭 들어야 할 과목
-    blocks.push(h('h4', { class: 'need-sub' }, '꼭 들어야 할 과목 ', h('span', { class: 'meta' }, need.must.length ? `${need.must.length}과목 남음` : '모두 들었습니다 ✓')));
+    blocks.push(h('h4', { class: 'need-sub' }, '꼭 들어야 할 과목 ', h('span', { class: 'meta' }, need.must.length ? `${need.must.length}과목 남음` : mustDoneLabel(ev, true))));
     if (need.must.length) blocks.push(h('ul', { class: 'must-list' }, need.must.map((m) => h('li', {}, h('b', {}, m.name),
       h('span', { class: 'meta' }, ` ${m.credits}학점 · ${reqLabel(m.reason)}` + (m.offered.length ? ` · 표준 ${m.offered.join('·')}학기 개설` : ''))))));
     // 트랙
     if (ev.tracks.length) {
-      blocks.push(h('h4', { class: 'need-sub' }, '트랙 ', h('span', { class: 'meta' }, `${ev.tracks.filter((t) => t.satisfied).length}/${ev.tracks.length} 충족`)));
+      const trPend = ev.tracks.some((t) => t.satisfied && t.parts.some((x) => x.fragile));
+      blocks.push(h('h4', { class: 'need-sub' }, '트랙 ', h('span', { class: 'meta' }, `${ev.tracks.filter((t) => t.satisfied).length}/${ev.tracks.length} 충족${trPend ? ' (예정 포함)' : ''}`)));
       blocks.push(h('ul', { class: 'must-list' }, ev.tracks.map((t) => {
         const rest = t.parts.filter((x) => !x.satisfied).map((x) => `${x.label.split(' (')[0]} ${x.min - x.earned}학점`);
         if (t.commonMissing.length) rest.push(`공통 필수 ${t.commonMissing.map(courseName).join(', ')}`);
-        return h('li', { class: 'row-line' }, h('b', {}, t.name), t.satisfied ? h('span', { class: 'st-ok' }, '충족 ✓') : h('span', { class: 'st-no' }, '남음: ' + rest.join(', ')));
+        return h('li', { class: 'row-line' }, h('b', {}, t.name), t.satisfied ? h('span', { class: 'st-ok' }, trackOkLabel(t)) : h('span', { class: 'st-no' }, '남음: ' + rest.join(', ')));
       })));
       const t3 = track3Note();
       if (t3) blocks.push(t3);
@@ -942,7 +961,7 @@
     const list = E.rankedPlans(R, engineProfile(), state.taken);
     const n = cur.version || 1;
     if (n < list.length) { setPlan(list[n], n + 1, cur.seen, list.length); planMsg = null; }
-    else { setPlan(list[0], 1, null, list.length); planMsg = list.length > 1 ? `같은 학점으로 만들 수 있는 조합 ${list.length}가지를 모두 보여 드렸습니다. 가장 효율적인 1번으로 돌아왔습니다.` : '같은 학점으로 만들 수 있는 다른 조합이 없습니다.'; }
+    else { setPlan(list[0], 1, null, list.length); planMsg = list.length > 1 ? `같은 학점으로 만들 수 있는 조합 ${list.length}가지를 모두 보여 드렸습니다. 1순위 안으로 돌아왔습니다.` : '같은 학점으로 만들 수 있는 다른 조합이 없습니다.'; }
     renderPlan();
   }
 
@@ -1025,6 +1044,7 @@
     $('plan-summary').replaceChildren(...[
       h('h3', { class: 'plan-total' }, '앞으로 들어야 할 학점 ', h('span', { class: 'plan-total-num' }, totalLeft ? `${totalLeft}학점` : '없음')),
       totalLeft ? h('p', { class: 'plan-breakdown' }, parts.map(([label, n]) => `${label} ${n}학점`).join(' · ') + (freeLeft ? `${parts.length ? ' · ' : ''}나머지 ${freeLeft}학점은 아무 과목(자유선택)` : '')) : null,
+      pendingLoad().n ? h('p', { class: 'plan-assume' }, `이번 학기 수강 중인 ${pendingLoad().n}과목(${pendingLoad().cr}학점)을 모두 통과한다고 보고 계산했습니다.`) : null,
       // 남은 학기로 가능한지 (시간표를 만들기 전에 미리)
       chk.short ? h('div', { class: 'warning error' }, `남은 ${chk.terms.length}학기 동안 들을 수 있는 최대 학점은 ${chk.capacity}학점이라 ${chk.short}학점이 모자랍니다. `,
         h('button', { class: 'link', onclick: () => showTab('basic') }, '「기본 정보」에서 남은 학기 늘리기')) : null,
@@ -1041,7 +1061,7 @@
     $('plan-empty').hidden = !nothing;
     $('plan-empty').textContent = '더 들을 과목이 없습니다. 이번 학기 수강 중인 과목만 이수하면 학점·과목 기준을 모두 채웁니다.';
     const blocks = [
-      h('h4', { class: 'need-sub' }, '꼭 들어야 할 과목 ', h('span', { class: 'meta' }, need.must.length ? `${need.must.length}과목 남음` : '모두 들었습니다')),
+      h('h4', { class: 'need-sub' }, '꼭 들어야 할 과목 ', h('span', { class: 'meta' }, need.must.length ? `${need.must.length}과목 남음` : mustDoneLabel(need.evaluation, false))),
       need.must.length ? h('ul', { class: 'must-list' }, need.must.map((m) => h('li', {}, h('b', {}, m.name), h('span', { class: 'meta' }, ` ${m.credits}학점 · ${reqLabel(m.reason)}` + (m.offered.length ? ` · 표준 ${m.offered.join('·')}학기 개설` : '')),
         chk.semNote[m.id] ? h('div', { class: 'sem-note ' + chk.semNote[m.id].level }, '⚠ ' + chk.semNote[m.id].text) : null))) : null,
     ];
@@ -1069,14 +1089,15 @@
     const shown = state.planShown && !nothing;
     const noTrack = !prof.tracks.length;
     $('tt-bar').replaceChildren(...(nothing ? [] : shown
-      ? [h('div', { class: 'tt-head' }, h('h3', {}, '추천 시간표 ', h('span', { class: 'count' }, `(추정) · ${(plan.version || 1) === 1 ? '가장 효율적인 안' : `${plan.version}순위`}${plan.total > 1 ? ` / ${plan.total}가지` : ''}`)),
+      ? [h('div', { class: 'tt-head' }, h('h3', {}, '학기별 수강 계획 ', h('span', { class: 'count' }, `(추정) · ${plan.version || 1}순위${plan.total > 1 ? ` / ${plan.total}가지` : ''}`)),
           h('div', { class: 'tt-actions' },
             h('button', { class: 'tt-next', onclick: nextPlanVersion, title: '같은 학점으로 다른 과목 조합' }, '다른 버전 만들기'),
             h('button', { class: 'link', onclick: () => { state.planShown = false; planMsg = null; save(); renderPlan(); } }, '접기'))),
+        h('p', { class: 'hint' }, '과목 순서를 바꿔 가며 배치 24가지를 만들어 보고, 그중 총 학점이 가장 적은 안부터 보여 줍니다. 수업 시간·분반 충돌은 확인하지 않으니 수강신청 시간표에서 꼭 확인하세요.'),
         noTrack ? h('p', { class: 'hint' }, '트랙을 하지 않으면 고를 수 있는 과목이 많습니다. 「다른 버전 만들기」로 같은 학점의 다른 조합을 볼 수 있습니다.') : null,
         planMsg ? h('div', { class: 'warning info' }, planMsg) : null]
-      : [h('button', { class: 'tt-make', onclick: () => { state.planShown = true; save(); renderPlan(); } }, '추천 시간표 만들기'),
-        h('span', { class: 'meta' }, ' 남은 학기에 최소 학점으로 배치해 봅니다')]).filter(Boolean));
+      : [h('button', { class: 'tt-make', onclick: () => { state.planShown = true; save(); renderPlan(); } }, '학기별 수강 계획 만들기'),
+        h('span', { class: 'meta' }, ' 남은 과목을 학기별로 나눠 배치합니다 (수업 시간·분반은 확인하지 않음)')]).filter(Boolean));
     ['plan-warnings', 'sem-title', 'semesters'].forEach((id) => { $(id).hidden = !shown; });
     $('plan-warnings').replaceChildren(...v.warnings.filter((w) => w.level !== 'info').map((w) => h('div', { class: 'warning ' + w.level }, (w.level === 'error' ? '' : '⚠ ') + w.text)));
     if (!shown) return;
@@ -1144,6 +1165,7 @@
     const needBasic = !ready() && ['status', 'plan'].includes(currentTab);
     $('need-basic').hidden = !needBasic;
     const home = currentTab === 'home' || currentTab === 'purpose';
+    $('demo-banner').hidden = !(state.portal && state.portal.sample);
     $('mode-bar').hidden = !state.mode || home;
     if (state.mode) {
       $('mode-name').textContent = MODES[state.mode].name;
@@ -1174,6 +1196,16 @@
     $('boot-note').hidden = true; // 시작됨 — 「새로고침해 주세요」 안내 숨김
     $('dept').textContent = `${R.departmentShort} · ${R.handbook.year}학년도 기준`;
     $('sample-banner').hidden = !R.sampleData;
+    // 샘플로 체험하기: 가상 학생(sample.js)을 PDF와 같은 경로로 읽는다. 이전 입력은 지우고 시작한다.
+    $('demo-btn').addEventListener('click', () => {
+      const sim = window.SAMPLE_SIM && E.parseSimulation(R, window.SAMPLE_SIM);
+      if (!sim) return;
+      state = defaults();
+      docErrors = [];
+      applySimulation(sim, { fileName: '샘플 학생 (가상)', checkedAt: Date.now(), sample: true });
+      save();
+      showTab('purpose');
+    });
     document.querySelectorAll('.steps button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
     document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.go)));
     // 목적 고르기·바꾸기. 바꿔도 입력한 자료·과목은 그대로 두고, 이미 준비됐으면 바로 결과 탭으로 간다.
